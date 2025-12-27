@@ -1,0 +1,8 @@
+config:
+  gcp:project: cis-5450-final-project
+  gcp:region: us-central1
+  mlops-potw:functionName: predict-potw
+  mlops-potw:alertEmail: adeji9@gmail.com
+  mlops-potw:rateLimit: "50"
+environment:
+  - mlops-potw/gcp-creds

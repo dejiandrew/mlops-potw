@@ -1,0 +1,11 @@
+name: mlops-potw
+description: ML-Ops infrastructure for NBA Player of the Week prediction endpoint
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: gcp-python
