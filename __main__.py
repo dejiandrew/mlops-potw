@@ -282,15 +282,15 @@ instrumented_function = gcp.cloudfunctionsv2.Function(
     },
 )
 
-# Make the function publicly accessible
-function_iam = gcp.cloudfunctionsv2.FunctionIamMember(
-    "function-invoker",
-    project=project,
-    location=region,
-    cloud_function=instrumented_function.name,
-    role="roles/cloudfunctions.invoker",
-    member="allUsers",
-)
+# # Make the function publicly accessible
+# function_iam = gcp.cloudfunctionsv2.FunctionIamMember(
+#     "function-invoker",
+#     project=project,
+#     location=region,
+#     cloud_function=instrumented_function.name,
+#     role="roles/cloudfunctions.invoker",
+#     member="allUsers",
+# )
 
 # # Create API Gateway API
 # api = gcp.apigateway.Api(
