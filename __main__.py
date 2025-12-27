@@ -29,8 +29,7 @@ table = gcp.bigquery.Table(
     table_id="potw_predictions",
     deletion_protection=False,
     schema=pulumi.Output.all().apply(
-        lambda _: """{
-  "fields": [
+        lambda _: """[
     {
       "name": "timestamp",
       "type": "TIMESTAMP",
@@ -89,8 +88,7 @@ table = gcp.bigquery.Table(
       "mode": "NULLABLE",
       "description": "HTTP status code"
     }
-  ]
-}"""
+  ]"""
     ),
 )
 
