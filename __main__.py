@@ -292,101 +292,101 @@ function_iam = gcp.cloudfunctionsv2.FunctionIamMember(
     member="allUsers",
 )
 
-# Create API Gateway API
-api = gcp.apigateway.Api(
-    "potw-api",
-    api_id="potw-predictions-api",
-    display_name="POTW Predictions API",
-)
+# # Create API Gateway API
+# api = gcp.apigateway.Api(
+#     "potw-api",
+#     api_id="potw-predictions-api",
+#     display_name="POTW Predictions API",
+# )
 
-# Create OpenAPI spec for API Gateway with rate limiting
-# This references the instrumented function's URI
-openapi_spec = instrumented_function.service_config.uri.apply(
-    lambda uri: f"""openapi: 2.0.0
-info:
-  title: NBA Player of the Week Predictions API
-  description: ML-Ops enabled API for POTW predictions
-  version: 1.0.0
-schemes:
-  - https
-produces:
-  - application/json
-x-google-backend:
-  address: {uri}
-  protocol: h2
-paths:
-  /predict:
-    post:
-      summary: Get POTW predictions
-      operationId: predict
-      x-google-quota:
-        metricCosts:
-          "api-requests": 1
-      responses:
-        '200':
-          description: Successful prediction
-          schema:
-            type: array
-            items:
-              type: object
-              properties:
-                conference:
-                  type: string
-                name:
-                  type: string
-                probability_pct:
-                  type: number
-                rank:
-                  type: integer
-x-google-management:
-  metrics:
-    - name: "api-requests"
-      valueType: INT64
-      metricKind: DELTA
-  quota:
-    limits:
-      - name: "api-requests-per-minute"
-        metric: "api-requests"
-        unit: "1/min/{{project}}"
-        values:
-          STANDARD: {rate_limit}
-"""
-)
+# # Create OpenAPI spec for API Gateway with rate limiting
+# # This references the instrumented function's URI
+# openapi_spec = instrumented_function.service_config.uri.apply(
+#     lambda uri: f"""openapi: 2.0.0
+# info:
+#   title: NBA Player of the Week Predictions API
+#   description: ML-Ops enabled API for POTW predictions
+#   version: 1.0.0
+# schemes:
+#   - https
+# produces:
+#   - application/json
+# x-google-backend:
+#   address: {uri}
+#   protocol: h2
+# paths:
+#   /predict:
+#     post:
+#       summary: Get POTW predictions
+#       operationId: predict
+#       x-google-quota:
+#         metricCosts:
+#           "api-requests": 1
+#       responses:
+#         '200':
+#           description: Successful prediction
+#           schema:
+#             type: array
+#             items:
+#               type: object
+#               properties:
+#                 conference:
+#                   type: string
+#                 name:
+#                   type: string
+#                 probability_pct:
+#                   type: number
+#                 rank:
+#                   type: integer
+# x-google-management:
+#   metrics:
+#     - name: "api-requests"
+#       valueType: INT64
+#       metricKind: DELTA
+#   quota:
+#     limits:
+#       - name: "api-requests-per-minute"
+#         metric: "api-requests"
+#         unit: "1/min/{{project}}"
+#         values:
+#           STANDARD: {rate_limit}
+# """
+# )
 
-# Create API Gateway API Config - depends on the function being created
-api_config = gcp.apigateway.ApiConfig(
-    "potw-api-config",
-    api=api.api_id,
-    api_config_id_prefix="potw-config-",
-    display_name="POTW API Config",
-    gateway_config={
-        "backend_config": {
-            "google_service_account": pulumi.Output.concat(
-                project, "@appspot.gserviceaccount.com"
-            ),
-        },
-    },
-    openapi_documents=[
-        {
-            "document": {
-                "path": "openapi.yaml",
-                "contents": openapi_spec.apply(
-                    lambda s: base64.b64encode(s.encode("utf-8")).decode("utf-8")
-                ),
-            },
-        }
-    ],
-    opts=pulumi.ResourceOptions(depends_on=[instrumented_function]),
-)
+# # Create API Gateway API Config - depends on the function being created
+# api_config = gcp.apigateway.ApiConfig(
+#     "potw-api-config",
+#     api=api.api_id,
+#     api_config_id_prefix="potw-config-",
+#     display_name="POTW API Config",
+#     gateway_config={
+#         "backend_config": {
+#             "google_service_account": pulumi.Output.concat(
+#                 project, "@appspot.gserviceaccount.com"
+#             ),
+#         },
+#     },
+#     openapi_documents=[
+#         {
+#             "document": {
+#                 "path": "openapi.yaml",
+#                 "contents": openapi_spec.apply(
+#                     lambda s: base64.b64encode(s.encode("utf-8")).decode("utf-8")
+#                 ),
+#             },
+#         }
+#     ],
+#     opts=pulumi.ResourceOptions(depends_on=[instrumented_function]),
+# )
 
-# Create API Gateway
-gateway = gcp.apigateway.Gateway(
-    "potw-gateway",
-    api_config=api_config.id,
-    gateway_id="potw-gateway",
-    display_name="POTW Predictions Gateway",
-    region=region,
-)
+# # Create API Gateway
+# gateway = gcp.apigateway.Gateway(
+#     "potw-gateway",
+#     api_config=api_config.id,
+#     gateway_id="potw-gateway",
+#     display_name="POTW Predictions Gateway",
+#     region=region,
+# )
 
 # Export the dataset and table names
 pulumi.export("bigquery_dataset", dataset.dataset_id)
@@ -399,12 +399,12 @@ pulumi.export("notification_channel_id", notification_channel.id)
 pulumi.export(
     "alert_policies", [latency_alert.id, error_rate_alert.id, volume_alert.id]
 )
-pulumi.export(
-    "api_gateway_url", gateway.default_hostname.apply(lambda h: f"https://{h}")
-)
-pulumi.export(
-    "api_endpoint",
-    gateway.default_hostname.apply(lambda h: f"https://{h}/predict"),
-)
+# pulumi.export(
+#     "api_gateway_url", gateway.default_hostname.apply(lambda h: f"https://{h}")
+# )
+# pulumi.export(
+#     "api_endpoint",
+#     gateway.default_hostname.apply(lambda h: f"https://{h}/predict"),
+# )
 pulumi.export("instrumented_function_url", instrumented_function.service_config.uri)
 pulumi.export("function_source_bucket", bucket.name)
