@@ -223,99 +223,6 @@ volume_alert = gcp.monitoring.AlertPolicy(
     },
 )
 
-# Create API Gateway API
-api = gcp.apigateway.Api(
-    "potw-api",
-    api_id="potw-predictions-api",
-    display_name="POTW Predictions API",
-)
-
-# Create OpenAPI spec for API Gateway with rate limiting
-openapi_spec = pulumi.Output.concat(
-    """openapi: 2.0.0
-info:
-  title: NBA Player of the Week Predictions API
-  description: ML-Ops enabled API for POTW predictions
-  version: 1.0.0
-schemes:
-  - https
-produces:
-  - application/json
-x-google-backend:
-  address: https://""",
-    region,
-    """-""",
-    project,
-    """.cloudfunctions.net/""",
-    function_name,
-    """
-  protocol: h2
-paths:
-  /predict:
-    post:
-      summary: Get POTW predictions
-      operationId: predict
-      x-google-quota:
-        metricCosts:
-          "api-requests": 1
-      responses:
-        '200':
-          description: Successful prediction
-          schema:
-            type: array
-            items:
-              type: object
-              properties:
-                conference:
-                  type: string
-                name:
-                  type: string
-                probability_pct:
-                  type: number
-                rank:
-                  type: integer
-x-google-management:
-  metrics:
-    - name: "api-requests"
-      valueType: INT64
-      metricKind: DELTA
-  quota:
-    limits:
-      - name: "api-requests-per-minute"
-        metric: "api-requests"
-        unit: "1/min/{project}"
-        values:
-          STANDARD: """,
-    str(rate_limit),
-    """
-""",
-)
-
-# Create API Gateway API Config
-api_config = gcp.apigateway.ApiConfig(
-    "potw-api-config",
-    api=api.api_id,
-    api_config_id_prefix="potw-config-",
-    display_name="POTW API Config",
-    gateway_config={
-        "backend_config": {
-            "google_service_account": pulumi.Output.concat(
-                project, "@appspot.gserviceaccount.com"
-            ),
-        },
-    },
-    openapi_documents=[
-        {
-            "document": {
-                "path": "openapi.yaml",
-                "contents": openapi_spec.apply(
-                    lambda s: base64.b64encode(s.encode("utf-8")).decode("utf-8")
-                ),
-            },
-        }
-    ],
-)
-
 # Create a storage bucket for the Cloud Function source code
 bucket = gcp.storage.Bucket(
     "function-source-bucket",
@@ -383,6 +290,93 @@ function_iam = gcp.cloudfunctionsv2.FunctionIamMember(
     cloud_function=instrumented_function.name,
     role="roles/cloudfunctions.invoker",
     member="allUsers",
+)
+
+# Create API Gateway API
+api = gcp.apigateway.Api(
+    "potw-api",
+    api_id="potw-predictions-api",
+    display_name="POTW Predictions API",
+)
+
+# Create OpenAPI spec for API Gateway with rate limiting
+# This references the instrumented function's URI
+openapi_spec = instrumented_function.service_config.uri.apply(
+    lambda uri: f"""openapi: 2.0.0
+info:
+  title: NBA Player of the Week Predictions API
+  description: ML-Ops enabled API for POTW predictions
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+x-google-backend:
+  address: {uri}
+  protocol: h2
+paths:
+  /predict:
+    post:
+      summary: Get POTW predictions
+      operationId: predict
+      x-google-quota:
+        metricCosts:
+          "api-requests": 1
+      responses:
+        '200':
+          description: Successful prediction
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                conference:
+                  type: string
+                name:
+                  type: string
+                probability_pct:
+                  type: number
+                rank:
+                  type: integer
+x-google-management:
+  metrics:
+    - name: "api-requests"
+      valueType: INT64
+      metricKind: DELTA
+  quota:
+    limits:
+      - name: "api-requests-per-minute"
+        metric: "api-requests"
+        unit: "1/min/{{project}}"
+        values:
+          STANDARD: {rate_limit}
+"""
+)
+
+# Create API Gateway API Config - depends on the function being created
+api_config = gcp.apigateway.ApiConfig(
+    "potw-api-config",
+    api=api.api_id,
+    api_config_id_prefix="potw-config-",
+    display_name="POTW API Config",
+    gateway_config={
+        "backend_config": {
+            "google_service_account": pulumi.Output.concat(
+                project, "@appspot.gserviceaccount.com"
+            ),
+        },
+    },
+    openapi_documents=[
+        {
+            "document": {
+                "path": "openapi.yaml",
+                "contents": openapi_spec.apply(
+                    lambda s: base64.b64encode(s.encode("utf-8")).decode("utf-8")
+                ),
+            },
+        }
+    ],
+    opts=pulumi.ResourceOptions(depends_on=[instrumented_function]),
 )
 
 # Create API Gateway
